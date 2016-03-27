@@ -1,22 +1,7 @@
-#include <ctime>
-#include <iostream>
-#include <random>
-
-#include <GLUT/glut.h>
-
-/* Function prototypes */
-void LogDebug(std::string, bool);
-void RenderString(double, double, const char*, const GLfloat*);
-void RandArea4p(GLfloat [][2]);
-bool IsPointContactsSquare(const GLfloat point[], const GLfloat area4p[][2]);
-void display(void);
-void resize(int, int);
-void mouse(int, int, int, int);
-void keyboard(unsigned char, int, int);
-void timer(int);
-void init(void);
+#include "./main.h"
 
 /* Constants */
+const bool kIS_DEBUG = true;
 const uint64_t kFRAME_MS = 33;
 const float kSQUARE_SIZE = 40.0f;
 
@@ -24,75 +9,53 @@ const float kSQUARE_SIZE = 40.0f;
 uint64_t frame_count = 0;
 uint64_t score = 0;
 GLfloat area4p[4][2] = {
-  { 0.0f, 0.0f },
-  { 0.0f, 0.0f },
-  { 0.0f, 0.0f },
-  { 0.0f, 0.0f },
+  { 0.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f },
 };
 
 int main(int argc, char *argv[]) {
-  bool is_debug = true;
-  LogDebug("call glutInitWindowPosition()", is_debug);
+  LogDebug("call glutInitWindowPosition()", kIS_DEBUG);
   glutInitWindowPosition(0, 0);
-  LogDebug("call glutInitWindowSize()", is_debug);
+  LogDebug("call glutInitWindowSize()", kIS_DEBUG);
   glutInitWindowSize(640, 640);
-  LogDebug("call glutInit()", is_debug);
+  LogDebug("call glutInit()", kIS_DEBUG);
   glutInit(&argc, argv);
-  LogDebug("call glutInitDisplayMode()", is_debug);
+  LogDebug("call glutInitDisplayMode()", kIS_DEBUG);
   glutInitDisplayMode(GLUT_RGBA);
-  LogDebug("call glutCreateWindow()", is_debug);
+  LogDebug("call glutCreateWindow()", kIS_DEBUG);
   glutCreateWindow("Hello, GLUT!");
-  LogDebug("call glutDisplayFunc()", is_debug);
-  glutDisplayFunc(display);
-  LogDebug("call glutReshapeFunc()", is_debug);
-  glutReshapeFunc(resize);
-  LogDebug("call glutMouseFunc()", is_debug);
-  glutMouseFunc(mouse);
-  LogDebug("call glutKeyboardFunc()", is_debug);
-  glutKeyboardFunc(keyboard);
-  LogDebug("call glutTimerFunc()", is_debug);
-  glutTimerFunc(kFRAME_MS, timer, 0);
-  LogDebug("call init()", is_debug);
-  init();
-  LogDebug("call glutMainLoop()", is_debug);
+  LogDebug("call glutDisplayFunc()", kIS_DEBUG);
+  glutDisplayFunc(Display);
+  LogDebug("call glutReshapeFunc()", kIS_DEBUG);
+  glutReshapeFunc(Resize);
+  LogDebug("call glutMouseFunc()", kIS_DEBUG);
+  glutMouseFunc(Mouse);
+  LogDebug("call glutKeyboardFunc()", kIS_DEBUG);
+  glutKeyboardFunc(Keyboard);
+  LogDebug("call glutTimerFunc()", kIS_DEBUG);
+  glutTimerFunc(kFRAME_MS, Timer, 0);
+  LogDebug("call init()", kIS_DEBUG);
+  Init();
+  LogDebug("call glutMainLoop()", kIS_DEBUG);
   glutMainLoop();
   return 0;
 }
 
-void LogDebug(std::string msg, bool is_debug) {
-  if (is_debug) {
-    time_t now = time(nullptr);
-    tm *time_now = localtime(&now);
-    char time_buffer[20];
-    strftime(time_buffer, sizeof(time_buffer), "%F %T", time_now);
-    std::cout
-      << time_buffer
-      << "\t"
-      << msg
-      << std::endl;
-  }
-}
-
-void RenderString(double x, double y, const char *str, const GLfloat *color4f) {
-  glColor4fv(color4f);
-  glRasterPos3d(x, y, -1.0);
-  char *p = (char*)str;
-  while (*p != '\0') glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *p++);
-}
-
-void display(void) {
+void Display(void) {
   glClear(GL_COLOR_BUFFER_BIT);
+  GLfloat colorGray[4] =  { 0.5f, 0.5f, 0.5f, 1.0f };
+  GLfloat colorRed[4] =   { 1.0f, 0.0f, 0.0f, 1.0f };
 
-  GLfloat colorGray[4] = { 0.5, 0.5, 0.5, 1.0 };
+  /* Display frame */
   char timer_buf[80];
   sprintf(timer_buf, "FRAME: %llu", frame_count);
-  RenderString(0.0, 20.0, timer_buf, colorGray);
+  RenderString(0.0f, 20.0f, timer_buf, colorGray);
 
+  /* Display score */
   char score_buf[80];
   sprintf(score_buf, "SCORE: %llu", score);
-  RenderString(0.0, 40.0, score_buf, colorGray);
+  RenderString(0.0f, 40.0f, score_buf, colorGray);
 
-  GLfloat colorRed[4] = { 1.0, 0.0, 0.0, 1.0 };
+  /* Display square */
   glColor4fv(colorRed);
   glBegin(GL_QUADS);
   for (int i = 0; i < 4; ++i) {
@@ -103,25 +66,42 @@ void display(void) {
   glFlush();
 }
 
-void resize(int w, int h) {
+void Resize(int w, int h) {
   glViewport(0, 0, w, h);
   glLoadIdentity();
   //glOrtho(-w/200.0, w/200.0, -h/200.0, h/200.0, -1.0, 1.0);
-  glOrtho(-0.5, (GLdouble)w - 0.5, (GLdouble)h - 0.5, -0.5, -1.0, 1.0);
+  glOrtho(-0.5, (GLfloat)w - 0.5, (GLfloat)h - 0.5, -0.5, -1.0, 1.0);
 }
 
-bool IsPointContactsSquare(const GLfloat point[], const GLfloat area4p[][2]) {
-  if (
-    (area4p[0][0] <= point[0] && point[0] <= area4p[2][0]) &&
-    (area4p[0][1] <= point[1] && point[1] <= area4p[2][1])
-  ) {
-    return true;
-  } else {
-    return false;
+void Mouse(int button, int state, int x, int y) {
+  /* DEBUG */
+  switch (button) {
+  case GLUT_LEFT_BUTTON:
+    LogDebug("left button", kIS_DEBUG);
+    break;
+  case GLUT_RIGHT_BUTTON:
+    LogDebug("right button", kIS_DEBUG);
+    break;
+  case GLUT_MIDDLE_BUTTON:
+    LogDebug("middle button", kIS_DEBUG);
+    break;
+  default:
+    break;
   }
-}
+  switch (state) {
+    case GLUT_UP:
+      LogDebug("up", kIS_DEBUG);
+      break;
+    case GLUT_DOWN:
+      LogDebug("down", kIS_DEBUG);
+      break;
+    default:
+      break;
+  }
+  char buf[20];
+  sprintf(buf, "at (%d, %d)", x, y);
+  LogDebug(buf, kIS_DEBUG);
 
-void mouse(int button, int state, int x, int y) {
   /* Get click event and add score */
   if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
     GLfloat clicked_xy[2] = { (float)x, (float)y };
@@ -131,52 +111,54 @@ void mouse(int button, int state, int x, int y) {
       RandArea4p(area4p);
     }
   }
-
-  /* DEBUG */
-  switch (button) {
-  case GLUT_LEFT_BUTTON:
-    LogDebug("left button", true);
-    break;
-  case GLUT_RIGHT_BUTTON:
-    LogDebug("right button", true);
-    break;
-  case GLUT_MIDDLE_BUTTON:
-    LogDebug("middle button", true);
-    break;
-  default:
-    break;
-  }
-  switch (state) {
-    case GLUT_UP:
-      LogDebug("up", true);
-      break;
-    case GLUT_DOWN:
-      LogDebug("down", true);
-      break;
-    default:
-      break;
-  }
-  char buf[20];
-  sprintf(buf, "at (%d, %d)", x, y);
-  LogDebug(buf, true);
 }
 
-void keyboard(unsigned char key, int x, int y) {
+void Keyboard(unsigned char key, int x, int y) {
   /* DEBUG */
   char buf[80];
   sprintf(buf, "input keyboard %c: (%d, %d)", key, x, y);
-  LogDebug(buf, true);
+  LogDebug(buf, kIS_DEBUG);
 
-  /* Exit if input is q, Q, ESC */
+  /* Exit if input is q,Q,ESC */
   switch (key) {
     case 'q':
     case 'Q':
     case '\033': /* ESC */
-      LogDebug("Exit by keyboard input", true);
+      LogDebug("Exit by keyboard input", kIS_DEBUG);
       exit(EXIT_SUCCESS);
     default:
       break;
   }
+}
+
+void Timer(int value) {
+  if (value == 0) {
+    ++frame_count;
+    glutPostRedisplay();
+    glutTimerFunc(kFRAME_MS, Timer, 0);
+  }
+}
+
+void Init(void) {
+  glClearColor(1.0, 1.0, 1.0, 1.0); /* White */
+  RandArea4p(area4p);
+}
+
+void LogDebug(std::string msg, bool is_debug) {
+  if (is_debug) {
+    time_t now = time(nullptr);
+    tm *time_now = localtime(&now);
+    char time_buffer[20];
+    strftime(time_buffer, sizeof(time_buffer), "%F %T", time_now);
+    std::cout << time_buffer << "\t" << msg << std::endl;
+  }
+}
+
+void RenderString(float x, float y, const char *str, const GLfloat *color4f) {
+  glColor4fv(color4f);
+  glRasterPos3f(x, y, -1.0f);
+  char *p = (char*)str;
+  while (*p != '\0') glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *p++);
 }
 
 void RandArea4p(GLfloat f[][2]) {
@@ -195,13 +177,13 @@ void RandArea4p(GLfloat f[][2]) {
   f[3][1] = rand_y;
 }
 
-void timer(int value) {
-  ++frame_count;
-  glutPostRedisplay();
-  glutTimerFunc(kFRAME_MS, timer, 0);
-}
-
-void init(void) {
-  glClearColor(1.0, 1.0, 1.0, 1.0); /* White */
-  RandArea4p(area4p);
+bool IsPointContactsSquare(const GLfloat point[], const GLfloat area4p[][2]) {
+  if (
+    (area4p[0][0] <= point[0] && point[0] <= area4p[2][0]) &&
+    (area4p[0][1] <= point[1] && point[1] <= area4p[2][1])
+  ) {
+    return true;
+  } else {
+    return false;
+  }
 }
